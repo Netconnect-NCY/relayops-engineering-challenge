@@ -15,7 +15,8 @@ services:
     environment:
       DATABASE_URL: postgresql://relayops:relayops@db:5432/relayops
     depends_on:
-      - db
+      db:
+        condition: service_healthy
     networks:
       - frontend
       - backend
@@ -27,8 +28,10 @@ services:
       RECEIVER_URL: http://receiver:9000/webhook
       WEBHOOK_SECRET: relayops-dev-secret
     depends_on:
-      - db
-      - receiver
+      db:
+        condition: service_healthy
+      receiver:
+        condition: service_started
     deploy:
       replicas: 2
     networks:
@@ -51,6 +54,11 @@ services:
       POSTGRES_PASSWORD: relayops
       POSTGRES_DB: relayops
       POSTGRES_HOST_AUTH_METHOD: trust
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -h 127.0.0.1 -U \"$$POSTGRES_USER\" -d \"$$POSTGRES_DB\""]
+      interval: 2s
+      timeout: 3s
+      retries: 15
     volumes:
       - pgdata:/var/lib/postgresql/data
       - ./db:/docker-entrypoint-initdb.d:ro
